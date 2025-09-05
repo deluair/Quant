@@ -8,7 +8,14 @@ import numpy as np
 from typing import List, Dict, Optional, Union
 from datetime import datetime, timedelta
 import requests
-from alpha_vantage.timeseries import TimeSeries
+
+# Make alpha_vantage optional
+try:
+    from alpha_vantage.timeseries import TimeSeries  # type: ignore
+    ALPHA_VANTAGE_AVAILABLE = True
+except Exception:
+    TimeSeries = None  # type: ignore
+    ALPHA_VANTAGE_AVAILABLE = False
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -27,8 +34,12 @@ class MarketData:
             alpha_vantage_key: Optional Alpha Vantage API key for premium data
         """
         self.alpha_vantage_key = alpha_vantage_key
-        if alpha_vantage_key:
-            self.av_ts = TimeSeries(key=alpha_vantage_key, output_format='pandas')
+        self.av_ts = None
+        if alpha_vantage_key and ALPHA_VANTAGE_AVAILABLE:
+            try:
+                self.av_ts = TimeSeries(key=alpha_vantage_key, output_format='pandas')
+            except Exception:
+                self.av_ts = None
     
     def get_stock_data(self, 
                       symbols: Union[str, List[str]], 
@@ -174,10 +185,14 @@ class MarketData:
         Returns:
             Risk-free rate as decimal
         """
+        # Map common periods to Yahoo Finance treasury tickers
         treasury_symbols = {
-            '3m': '^IRX',
-            '1y': '^TNX',
-            '10y': '^TNX'
+            '3m': '^IRX',   # 13 Week T-Bill
+            '6m': '^IRX',
+            '1y': '^FVX',   # 5 Year (closest available on Yahoo)
+            '2y': '^FVX',
+            '5y': '^FVX',   # 5 Year Treasury Yield Index
+            '10y': '^TNX',  # 10 Year Treasury Note
         }
         
         try:

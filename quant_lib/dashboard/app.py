@@ -443,6 +443,9 @@ class QuantDashboard:
     def risk_analysis_page(self):
         """Risk analysis page."""
         st.header("⚠️ Risk Analysis")
+        if self.market_data is None:
+            st.warning("Market data features are unavailable. Please install dependencies to enable Risk Analysis.")
+            return
         
         # Portfolio input
         st.subheader("Portfolio Setup")
@@ -523,6 +526,9 @@ class QuantDashboard:
     def portfolio_optimization_page(self):
         """Portfolio optimization page."""
         st.header("🎯 Portfolio Optimization")
+        if self.market_data is None:
+            st.warning("Market data features are unavailable. Please install dependencies to enable Portfolio Optimization.")
+            return
         
         # Input parameters
         symbols_input = st.text_input("Stock Symbols (comma-separated)", value="AAPL,GOOGL,MSFT,AMZN,TSLA")
@@ -727,6 +733,9 @@ class QuantDashboard:
     def capm_analysis_page(self):
         """CAPM analysis page."""
         st.header("📈 CAPM Analysis")
+        if self.market_data is None:
+            st.warning("Market data features are unavailable. Please install dependencies to enable CAPM Analysis.")
+            return
         
         stock_symbol = st.text_input("Stock Symbol", value="AAPL").upper()
         market_symbol = st.text_input("Market Index", value="SPY").upper()
