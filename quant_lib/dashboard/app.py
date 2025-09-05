@@ -16,17 +16,31 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
-from data.market_data import MarketData
-from models.black_scholes import BlackScholes
-from models.capm import CAPM
-from models.monte_carlo import MonteCarlo
-from models.binomial import BinomialTree
-from risk.var import VaR
-from risk.metrics import RiskMetrics
-from portfolio.optimizer import PortfolioOptimizer
-from portfolio.efficient_frontier import EfficientFrontier
-from ml.predictors import ReturnPredictor
-from ml.features import FeatureEngineer
+# Prefer package-level imports with optional components guarded
+from quant_lib import (
+    BlackScholes,
+    CAPM,
+    MonteCarlo,
+    BinomialTree,
+    VaR,
+    RiskMetrics,
+    PortfolioOptimizer,
+    EfficientFrontier,
+    MARKET_DATA_AVAILABLE,
+    ML_AVAILABLE,
+)
+
+try:
+    from quant_lib import MarketData  # optional
+except Exception:
+    MarketData = None
+
+try:
+    from quant_lib.ml.predictors import ReturnPredictor  # optional
+    from quant_lib.ml.features import FeatureEngineer    # optional
+except Exception:
+    ReturnPredictor = None
+    FeatureEngineer = None
 
 
 class QuantDashboard:
@@ -36,7 +50,7 @@ class QuantDashboard:
     
     def __init__(self):
         """Initialize the dashboard."""
-        self.market_data = MarketData()
+        self.market_data = MarketData() if MarketData else None
         self.bs_model = BlackScholes()
         self.capm = CAPM()
         self.monte_carlo = MonteCarlo()
@@ -44,8 +58,8 @@ class QuantDashboard:
         self.var_calculator = VaR()
         self.risk_metrics = RiskMetrics()
         self.optimizer = PortfolioOptimizer()
-        self.predictor = ReturnPredictor()
-        self.feature_engineer = FeatureEngineer()
+        self.predictor = ReturnPredictor() if ReturnPredictor else None
+        self.feature_engineer = FeatureEngineer() if FeatureEngineer else None
     
     def run(self):
         """Run the Streamlit dashboard."""
@@ -61,17 +75,18 @@ class QuantDashboard:
         
         # Sidebar navigation
         st.sidebar.title("Navigation")
-        page = st.sidebar.selectbox(
-            "Choose Analysis Type",
-            [
-                "Market Data Analysis",
-                "Option Pricing",
-                "Risk Analysis",
-                "Portfolio Optimization",
-                "ML Predictions",
-                "CAPM Analysis"
-            ]
-        )
+        pages = [
+            "Option Pricing",
+            "Risk Analysis",
+            "Portfolio Optimization",
+            "CAPM Analysis",
+        ]
+        if self.market_data is not None:
+            pages.insert(0, "Market Data Analysis")
+        if self.predictor is not None and self.feature_engineer is not None:
+            pages.insert(4, "ML Predictions")
+
+        page = st.sidebar.selectbox("Choose Analysis Type", pages)
         
         # Route to appropriate page
         if page == "Market Data Analysis":
@@ -90,6 +105,9 @@ class QuantDashboard:
     def market_data_page(self):
         """Market data analysis page."""
         st.header("📊 Market Data Analysis")
+        if self.market_data is None:
+            st.warning("Market data features are unavailable. Please install dependencies or provide API keys.")
+            return
         
         # Stock selection
         col1, col2, col3 = st.columns(3)
@@ -304,6 +322,10 @@ class QuantDashboard:
             'Volume': data[volume_col] if volume_col in data.columns else pd.Series(index=data.index)
         })
         
+        if self.feature_engineer is None:
+            st.warning("Feature engineering module unavailable. Install ML extras to enable indicators.")
+            return
+
         features = self.feature_engineer.create_technical_features(symbol_data)
         
         # Plot
@@ -611,6 +633,9 @@ class QuantDashboard:
     def ml_predictions_page(self):
         """ML predictions page."""
         st.header("🤖 ML Return Predictions")
+        if self.predictor is None or self.feature_engineer is None or self.market_data is None:
+            st.warning("ML features are unavailable. Ensure ML dependencies and market data are installed.")
+            return
         
         symbol = st.text_input("Stock Symbol", value="AAPL").upper()
         period = st.selectbox("Training Period", ["2y", "3y", "5y"], index=1)
