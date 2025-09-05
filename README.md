@@ -40,14 +40,24 @@ A comprehensive Python library for quantitative finance analysis, featuring mark
 pip install -r requirements.txt
 ```
 
+Notes:
+- Eventlet is included to resolve SSL issues on Python 3.12+ (wrap_socket deprecation). If you installed earlier, upgrade with: `pip install -U eventlet`.
+- TensorFlow/PyTorch are optional and only required for the ML page. The rest of the library and dashboard work without them.
+
 ## Quick Start
 
 ```python
-from quant_lib import MarketData, BlackScholes, VaR, PortfolioOptimizer
+from quant_lib import BlackScholes, VaR, PortfolioOptimizer, MARKET_DATA_AVAILABLE
+# MarketData is optional depending on your environment
+try:
+    from quant_lib import MarketData
+except Exception:
+    MarketData = None
 
-# Fetch market data
-data = MarketData()
-prices = data.get_stock_data(['AAPL', 'GOOGL', 'MSFT'], period='1y')
+# Fetch market data (requires yfinance). If MarketData is unavailable, skip this section.
+if MARKET_DATA_AVAILABLE and MarketData is not None:
+    data = MarketData()
+    prices = data.get_stock_data(['AAPL', 'GOOGL', 'MSFT'], period='1y')
 
 # Calculate Black-Scholes option price
 bs = BlackScholes()
@@ -55,9 +65,11 @@ option_price = bs.calculate_price(
     S=100, K=105, T=0.25, r=0.05, sigma=0.2, option_type='call'
 )
 
-# Calculate portfolio VaR
+# Calculate portfolio VaR (requires a returns series/DataFrame)
 var_calc = VaR()
-portfolio_var = var_calc.historical_var(prices, confidence=0.95)
+# Example with synthetic returns:
+# portfolio_returns = prices['Close_AAPL'].pct_change().dropna()
+# portfolio_var = var_calc.historical_var(portfolio_returns, confidence_level=0.95)
 
 # Optimize portfolio
 optimizer = PortfolioOptimizer()
@@ -89,6 +101,9 @@ quant_lib/
 │   ├── app.py            # Streamlit/Dash app
 │   └── components/       # Dashboard components
 └── tests/                # Unit tests
+
+enhanced_test.py          # Offline test suite (no external data needed)
+run_dashboard.py          # Entry script to launch Streamlit dashboard
 ```
 
 ## Requirements
@@ -99,6 +114,15 @@ quant_lib/
 - Scikit-learn, TensorFlow/PyTorch
 - yfinance, alpha_vantage
 - Streamlit (for dashboard)
+
+Optional/Environment notes:
+- TensorFlow is optional (used only by ML page). If it fails to load on Windows, the rest of the app still works.
+- alpha_vantage is optional; `MarketData` will default to yfinance if alpha_vantage is missing.
+- Eventlet>=0.40.3 is included to fix SSL on Python 3.12+.
+
+Troubleshooting:
+- SSL error about `ssl.wrap_socket`: upgrade/install eventlet: `pip install -U eventlet`.
+- TensorFlow DLL error: ignore if not using ML; the ML page will be hidden automatically.
 
 ## Contributing
 
@@ -114,3 +138,29 @@ MIT License - see LICENSE file for details.
 ## Disclaimer
 
 This library is for educational and research purposes only. Not intended for actual trading decisions without proper risk management and due diligence.
+
+## Run the Dashboard
+
+Windows (PowerShell):
+
+```powershell
+cd "C:\Users\mhossen\OneDrive - University of Tennessee\AI\Quant"
+python -m pip install -r requirements.txt
+streamlit run run_dashboard.py
+```
+
+Open `http://localhost:8501` in your browser.
+
+To choose a custom port:
+
+```powershell
+streamlit run run_dashboard.py --server.port 8502
+```
+
+## Run the Offline Test Suite
+
+```powershell
+python enhanced_test.py
+```
+
+All six suites should pass without Internet access.
