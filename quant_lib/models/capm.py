@@ -234,28 +234,21 @@ class CAPM:
         aligned_data = pd.concat([asset_returns, market_returns], axis=1).dropna()
         if len(aligned_data) < window:
             raise ValueError(f"Insufficient data: need at least {window} observations")
-        
+
         asset_ret = aligned_data.iloc[:, 0]
         market_ret = aligned_data.iloc[:, 1]
-        
+
+        # Convert to excess returns (period rate)
         rf_period = risk_free_rate / 252
-        
-        def calc_beta(window_data):
-            if len(window_data) < 2:
-                return np.nan
-            asset_excess = window_data.iloc[:, 0] - rf_period
-            market_excess = window_data.iloc[:, 1] - rf_period
-            
-            if market_excess.var() == 0:
-                return np.nan
-            
-            return asset_excess.cov(market_excess) / market_excess.var()
-        
-        rolling_betas = aligned_data.rolling(window=window).apply(
-            lambda x: calc_beta(x), raw=False
-        )
-        
-        return rolling_betas.iloc[:, 0]  # Return only the beta series
+        asset_excess = asset_ret - rf_period
+        market_excess = market_ret - rf_period
+
+        # Rolling beta = Cov(asset, market) / Var(market)
+        rolling_cov = asset_excess.rolling(window).cov(market_excess)
+        rolling_var = market_excess.rolling(window).var()
+        rolling_beta_series = rolling_cov / rolling_var
+
+        return rolling_beta_series
     
     def capm_performance_attribution(self, 
                                    portfolio_returns: pd.Series,
