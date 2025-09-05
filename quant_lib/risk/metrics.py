@@ -124,17 +124,22 @@ class RiskMetrics:
             }
         
         max_drawdown_end = drawdown.idxmin()
-        if max_drawdown_end is not None and max_drawdown_end > 0:
-            max_drawdown_start = running_max[:max_drawdown_end].idxmax()
-        else:
+        # Determine the start date of the drawdown period using label-based slicing
+        try:
+            max_drawdown_start = running_max.loc[:max_drawdown_end].idxmax()
+        except Exception:
             max_drawdown_start = None
         
         # Recovery time
         recovery_date = None
-        if max_drawdown_end < len(cumulative_returns) - 1:
-            recovery_mask = cumulative_returns[max_drawdown_end:] >= running_max[max_drawdown_end]
-            if recovery_mask.any():
-                recovery_date = recovery_mask.idxmax()
+        try:
+            end_pos = cumulative_returns.index.get_loc(max_drawdown_end)
+            if end_pos < len(cumulative_returns) - 1:
+                recovery_mask = cumulative_returns[max_drawdown_end:] >= running_max[max_drawdown_end]
+                if recovery_mask.any():
+                    recovery_date = recovery_mask.idxmax()
+        except Exception:
+            recovery_date = None
         
         return {
             'max_drawdown': max_drawdown,
