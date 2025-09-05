@@ -82,11 +82,16 @@ class RiskMetrics:
         annualized_return = (1 + returns.mean()) ** periods_per_year - 1
         
         if prices is not None:
-            max_dd = self.maximum_drawdown(prices)['max_drawdown']
+            # Compute drawdown directly from price series
+            running_max = prices.expanding().max()
+            drawdown = (prices - running_max) / running_max
+            max_dd = drawdown.min()
         else:
-            # Calculate cumulative returns and then max drawdown
+            # Calculate cumulative returns and then max drawdown using returns series
             cumulative_returns = (1 + returns).cumprod()
-            max_dd = self.maximum_drawdown(cumulative_returns)['max_drawdown']
+            running_max = cumulative_returns.expanding().max()
+            drawdown = (cumulative_returns - running_max) / running_max
+            max_dd = drawdown.min()
         
         if max_dd == 0:
             return np.inf
@@ -338,7 +343,7 @@ class RiskMetrics:
         # Risk metrics
         sharpe = self.sharpe_ratio(returns, risk_free_rate, periods_per_year)
         sortino = self.sortino_ratio(returns, risk_free_rate, periods_per_year)
-        calmar = self.calmar_ratio(returns, periods_per_year)
+        calmar = self.calmar_ratio(returns, prices=None, periods_per_year=periods_per_year)
         max_dd_info = self.maximum_drawdown(returns)
         
         # Distribution metrics
