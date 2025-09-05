@@ -175,10 +175,12 @@ class BinomialTree:
                     'exercise_nodes': exercise_nodes
                 })
         
+        european_price = self.european_option_price(S0, K, T, r, sigma, option_type, n_steps)['price']
+        
         return {
             'price': option_tree[0, 0],
-            'european_price': self.european_option_price(S0, K, T, r, sigma, option_type, n_steps)['price'],
-            'early_exercise_premium': option_tree[0, 0] - self.european_option_price(S0, K, T, r, sigma, option_type, n_steps)['price'],
+            'european_price': european_price,
+            'early_exercise_premium': option_tree[0, 0] - european_price,
             'exercise_boundary': exercise_boundary,
             'u': u,
             'd': d,

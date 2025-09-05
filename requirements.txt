@@ -19,3 +19,4 @@ cvxpy>=1.2.0
 PyPortfolioOpt>=1.5.0
 ta>=0.10.0
 arch>=5.0.0
+eventlet>=0.40.3

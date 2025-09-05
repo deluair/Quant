@@ -183,67 +183,40 @@ class BlackScholes:
         # Initial guess
         sigma = 0.2
         
-        def calculate_implied_volatility(self, market_price: float, S: float, K: float, T: float, r: float, option_type: str = 'call') -> float:
-            """
-            Calculate implied volatility using Newton-Raphson method.
-            """
-            if not SCIPY_AVAILABLE:
-                # Simple Newton-Raphson implementation
-                sigma = 0.2  # Initial guess
-                for _ in range(100):  # Max iterations
-                    price = self.calculate_price(S, K, T, r, sigma, option_type)
-                    vega = self.calculate_greeks(S, K, T, r, sigma, option_type)['vega']
+        
+        if not SCIPY_AVAILABLE:
+            # Simple Newton-Raphson implementation
+            for i in range(max_iterations):
+                price = self.calculate_price(S, K, T, r, sigma, option_type)
+                vega = self.calculate_greeks(S, K, T, r, sigma, option_type)['vega']
+                
+                if abs(vega) < 1e-10:
+                    break
                     
-                    if abs(vega) < 1e-10:
-                        break
-                        
-                    sigma_new = sigma - (price - market_price) / vega
+                sigma_new = sigma - (price - market_price) / (vega * 100)
+                
+                if abs(sigma_new - sigma) < tolerance:
+                    return max(sigma_new, 0.001)
                     
-                    if abs(sigma_new - sigma) < 1e-6:
-                        return max(sigma_new, 0.001)
-                        
-                    sigma = max(sigma_new, 0.001)
-                
-                return sigma
+                sigma = max(sigma_new, 0.001)
             
-            def objective(sigma):
-                return self.calculate_price(S, K, T, r, sigma, option_type) - market_price
+            return sigma
+        
+        def objective(sigma):
+            return self.calculate_price(S, K, T, r, sigma, option_type) - market_price
+        
+        try:
+            # Initial bounds for volatility search
+            vol_low, vol_high = 0.001, 5.0
             
-            try:
-                # Initial bounds for volatility search
-                vol_low, vol_high = 0.001, 5.0
-                
-                # Check if solution exists in bounds
-                if objective(vol_low) * objective(vol_high) > 0:
-                    return np.nan
-                
-                implied_vol = brentq(objective, vol_low, vol_high, xtol=1e-6)
-                return implied_vol
-            except:
+            # Check if solution exists in bounds
+            if objective(vol_low) * objective(vol_high) > 0:
                 return np.nan
-        
-        for i in range(max_iterations):
-            # Calculate price and vega
-            price = self.calculate_price(S, K, T, r, sigma, option_type)
-            vega = self.calculate_greeks(S, K, T, r, sigma, option_type)['vega'] * 100
             
-            # Price difference
-            price_diff = price - market_price
-            
-            # Check convergence
-            if abs(price_diff) < tolerance:
-                return sigma
-            
-            # Newton-Raphson update
-            if vega != 0:
-                sigma = sigma - price_diff / vega
-            else:
-                break
-            
-            # Ensure sigma stays positive
-            sigma = max(sigma, 1e-6)
-        
-        return sigma
+            implied_vol = brentq(objective, vol_low, vol_high, xtol=tolerance)
+            return implied_vol
+        except:
+            return np.nan
     
     def option_chain(self, 
                     S: float, 

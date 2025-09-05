@@ -288,7 +288,7 @@ class CAPM:
         market_sharpe = (market_annual - risk_free_rate) / market_vol
         
         # Calculate Treynor ratio
-        treynor = self.treynor_ratio(portfolio_annual, camp_stats['beta'], risk_free_rate)
+        treynor = self.treynor_ratio(portfolio_annual, capm_stats['beta'], risk_free_rate)
         
         # Calculate Jensen's Alpha
         jensens_alpha = self.jensens_alpha(

@@ -66,19 +66,27 @@ class RiskMetrics:
     
     def calmar_ratio(self, 
                     returns: pd.Series, 
+                    prices: pd.Series = None,
                     periods_per_year: int = 252) -> float:
         """
         Calculate Calmar ratio (annualized return / maximum drawdown).
         
         Args:
             returns: Return series
+            prices: Price series (optional, will be calculated from returns if not provided)
             periods_per_year: Number of periods per year
             
         Returns:
             Calmar ratio
         """
         annualized_return = (1 + returns.mean()) ** periods_per_year - 1
-        max_dd = self.maximum_drawdown(returns)['max_drawdown']
+        
+        if prices is not None:
+            max_dd = self.maximum_drawdown(prices)['max_drawdown']
+        else:
+            # Calculate cumulative returns and then max drawdown
+            cumulative_returns = (1 + returns).cumprod()
+            max_dd = self.maximum_drawdown(cumulative_returns)['max_drawdown']
         
         if max_dd == 0:
             return np.inf
@@ -100,8 +108,21 @@ class RiskMetrics:
         drawdown = (cumulative_returns - running_max) / running_max
         
         max_drawdown = drawdown.min()
+        if len(drawdown) == 0:
+            return {
+                'max_drawdown': 0,
+                'max_drawdown_start': None,
+                'max_drawdown_end': None,
+                'recovery_date': None,
+                'drawdown_duration': None,
+                'recovery_duration': None
+            }
+        
         max_drawdown_end = drawdown.idxmin()
-        max_drawdown_start = running_max[:max_drawdown_end].idxmax()
+        if max_drawdown_end is not None and max_drawdown_end > 0:
+            max_drawdown_start = running_max[:max_drawdown_end].idxmax()
+        else:
+            max_drawdown_start = None
         
         # Recovery time
         recovery_date = None
